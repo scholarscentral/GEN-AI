@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Python & GenAI LMS – 10-Day Bootcamp</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#07071A;color:#E2E8F0;font-family:system-ui,-apple-system,sans-serif;min-height:100vh}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;font-family:inherit}
+input,textarea{font-family:inherit}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(99,102,241,0.3);border-radius:2px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script>
+/* ─────────────────────────────────────────────────────────────────────────────
+   CONFIG  ─  Only edit this section if you want to pre-fill a default key.
+              Leave GEMINI_API_KEY as "" to require users to enter their own key.
+   ─────────────────────────────────────────────────────────────────────────────
+   HOW TO GET A FREE GEMINI API KEY:
+   1. Go to https://aistudio.google.com/apikey
+   2. Sign in with your Google account
+   3. Click "Create API key"
+   4. Copy the key (starts with AIzaSy...)
+   5. Either paste it below OR enter it via the Settings (⚙) button in the AI Tutor
+   ───────────────────────────────────────────────────────────────────────────── */
+const CONFIG = {
+  GEMINI_API_KEY: "",   // Optional: paste your key here e.g. "AIzaSyXXXXXXX"
+  GEMINI_MODEL: "gemini-2.0-flash",   // Free tier model
+};
+
+/* ─── Helper ──────────────────────────────────────────────────────────────── */
+const {useState,useRef,useEffect}=React;
+function rgb(h){return`${parseInt(h.slice(1,3),16)},${parseInt(h.slice(3,5),16)},${parseInt(h.slice(5,7),16)}`}
+const ce=React.createElement;
+const ACC=["#818CF8","#22D3EE","#F472B6","#FCD34D","#A78BFA","#4ADE80","#FB7185","#FBBF24","#60A5FA","#34D399"];
+
+/* ─── Curriculum Data ─────────────────────────────────────────────────────── */
+const DAYS=[
+  {day:1,title:"Python Foundations",icon:"🐍",tag:"SYNTAX & STRUCTURE",
+   outcomes:["Install Python and set up a development environment","Master lists, tuples, sets, and dictionaries","Write functions with parameters and return values","Import and use standard library modules"],
+   chips:["Installation","Lists","Tuples","Sets","Dicts","Functions","Libraries"],
+   videos:[
+     {title:"Python Full Course for Beginners",ch:"freeCodeCamp.org",url:"https://www.youtube.com/watch?v=rfscVS0vtbw",dur:"4.5 hrs"},
+     {title:"Python Tutorial – Complete Course",ch:"Programming with Mosh",url:"https://www.youtube.com/watch?v=_uQrJ0TkZlc",dur:"6 hrs"}
+   ],
+   docs:[
+     {label:"Python Official Tutorial",url:"https://docs.python.org/3/tutorial/"},
+     {label:"W3Schools Python Reference",url:"https://www.w3schools.com/python/"},
+     {label:"Real Python – Beginner Guide",url:"https://realpython.com/start-here/"},
+     {label:"Google's Python Class (Free)",url:"https://developers.google.com/edu/python"}
+   ]},
+  {day:2,title:"AI Intro & Prompt Engineering",icon:"🤖",tag:"AI FUNDAMENTALS",
+   outcomes:["Understand AI, LLMs and their capabilities","Interact hands-on with Google Gemini","Apply zero-shot, few-shot and chain-of-thought prompting","Design effective prompts for different task types"],
+   chips:["AI Concepts","LLMs","Gemini","Prompt Design","Zero-shot","Few-shot","CoT"],
+   videos:[
+     {title:"Introduction to Generative AI",ch:"Google Cloud Tech",url:"https://www.youtube.com/watch?v=G2fqAlgmoPo",dur:"22 min"},
+     {title:"Intro to Large Language Models",ch:"Andrej Karpathy",url:"https://www.youtube.com/watch?v=zjkBMFhNj_g",dur:"1 hr"}
+   ],
+   docs:[
+     {label:"Google Gemini API Docs",url:"https://ai.google.dev/gemini-api/docs"},
+     {label:"Prompt Engineering Guide (Free)",url:"https://www.promptingguide.ai/"},
+     {label:"Google AI Studio (Free Sandbox)",url:"https://aistudio.google.com/"},
+     {label:"OpenAI Prompt Engineering Guide",url:"https://platform.openai.com/docs/guides/prompt-engineering"}
+   ]},
+  {day:3,title:"GenAI APIs & AI Agents",icon:"⚡",tag:"API & AGENTS",
+   outcomes:["Call Gemini/OpenAI APIs from Python","Build a mini LLM application","Compare GPT-4, Gemini, Claude, Llama, Mixtral","Develop a basic AI agent with tool use"],
+   chips:["Gemini API","Python SDK","GPT-4","Claude","Llama","AI Agents","Tool Use"],
+   videos:[
+     {title:"Build AI Apps with Gemini API + Python",ch:"Tech With Tim",url:"https://www.youtube.com/watch?v=0ETdT4A0oCQ",dur:"1.5 hrs"},
+     {title:"What Are AI Agents?",ch:"IBM Technology",url:"https://www.youtube.com/watch?v=F8NKVhkZZWI",dur:"20 min"}
+   ],
+   docs:[
+     {label:"Google Gen AI Python SDK (GitHub)",url:"https://github.com/google-gemini/generative-ai-python"},
+     {label:"Anthropic Claude API Docs",url:"https://docs.anthropic.com/en/api/getting-started"},
+     {label:"OpenAI API Reference",url:"https://platform.openai.com/docs/api-reference"},
+     {label:"Lilian Weng – LLM Agents (Blog)",url:"https://lilianweng.github.io/posts/2023-06-23-agent/"}
+   ]},
+  {day:4,title:"Streamlit & Deployment",icon:"🚀",tag:"UI & CLOUD DEPLOY",
+   outcomes:["Build interactive web UIs with Streamlit","Create a GenAI-powered project","Push your project to GitHub","Deploy to Streamlit Community Cloud (free)"],
+   chips:["Streamlit","Components","Session State","GitHub","CI/CD","Cloud Deploy"],
+   videos:[
+     {title:"Streamlit Python Tutorial",ch:"Data Professor",url:"https://www.youtube.com/watch?v=ZZ4B0QUHuNc",dur:"1 hr"},
+     {title:"Build & Deploy LLM Apps with Streamlit",ch:"Krish Naik",url:"https://www.youtube.com/watch?v=Df2rPNDPv5o",dur:"30 min"}
+   ],
+   docs:[
+     {label:"Streamlit Official Docs",url:"https://docs.streamlit.io/"},
+     {label:"Streamlit App Gallery",url:"https://streamlit.io/gallery"},
+     {label:"GitHub – Getting Started",url:"https://docs.github.com/en/get-started"},
+     {label:"Streamlit Community Cloud Deploy",url:"https://docs.streamlit.io/deploy/streamlit-community-cloud"}
+   ]},
+  {day:5,title:"PyCharm IDE & Real-World Agents",icon:"🛠️",tag:"TOOLS & PROJECTS",
+   outcomes:["Install and configure PyCharm Community Edition (free)","Build and manage Python projects in PyCharm","Understand AI agents with real industry examples","Implement a real AI agent in Python"],
+   chips:["PyCharm","IDE Setup","Debugger","Virtual Env","Agent Patterns","Real World"],
+   videos:[
+     {title:"PyCharm Tutorial for Beginners",ch:"JetBrains",url:"https://www.youtube.com/watch?v=56bPIGf4us0",dur:"48 min"},
+     {title:"Building AI Agents from Scratch",ch:"Sam Witteveen",url:"https://www.youtube.com/watch?v=jQ-rSNMeE90",dur:"40 min"}
+   ],
+   docs:[
+     {label:"PyCharm Community Edition (Free Download)",url:"https://www.jetbrains.com/pycharm/download/"},
+     {label:"PyCharm Official Docs",url:"https://www.jetbrains.com/help/pycharm/"},
+     {label:"Anthropic – Building Effective Agents",url:"https://www.anthropic.com/research/building-effective-agents"},
+     {label:"Real Python – AI Agents Guide",url:"https://realpython.com/python-ai-agent/"}
+   ]},
+  {day:6,title:"Agent Flows & Ollama",icon:"🌐",tag:"LOCAL AI",
+   outcomes:["Design multi-step AI agent workflows","Install Ollama and run local LLMs","Interact with Llama 3, Mistral, Phi-3 locally","Build Python scripts calling local Ollama models"],
+   chips:["Agent Flows","Ollama","Local LLM","Llama 3","Mistral","Python API"],
+   videos:[
+     {title:"Ollama – Run AI Models Locally",ch:"Matt Williams",url:"https://www.youtube.com/watch?v=90ozfdsQOKo",dur:"25 min"},
+     {title:"AI Agent Design Patterns",ch:"Prompt Engineering",url:"https://www.youtube.com/watch?v=DnkVuEJFMtk",dur:"40 min"}
+   ],
+   docs:[
+     {label:"Ollama Official Website & Download",url:"https://ollama.com/"},
+     {label:"Ollama Model Library",url:"https://ollama.com/library"},
+     {label:"Ollama GitHub Repository",url:"https://github.com/ollama/ollama"},
+     {label:"LangChain Ollama Integration",url:"https://python.langchain.com/docs/integrations/llms/ollama/"}
+   ]},
+  {day:7,title:"Tkinter, Groq, Claude & Hugging Face",icon:"🎨",tag:"GUI & APIS",
+   outcomes:["Build native desktop GUIs with Python's Tkinter","Use Groq API for ultra-fast LLM inference","Interact with Anthropic Claude API from Python","Explore the Hugging Face ecosystem"],
+   chips:["Tkinter","Widgets","Groq API","Claude API","HuggingFace","Inference"],
+   videos:[
+     {title:"Tkinter Full Course – Python GUI",ch:"Tech With Tim",url:"https://www.youtube.com/watch?v=YXPyB4XeYLA",dur:"3 hrs"},
+     {title:"Groq – World's Fastest AI Inference",ch:"1littlecoder",url:"https://www.youtube.com/watch?v=jP13cHFxFAM",dur:"15 min"}
+   ],
+   docs:[
+     {label:"Python Tkinter Official Docs",url:"https://docs.python.org/3/library/tkinter.html"},
+     {label:"Groq Console & Free API Access",url:"https://console.groq.com/docs/openai"},
+     {label:"Anthropic Claude API – Get Started",url:"https://docs.anthropic.com/en/docs/get-started"},
+     {label:"Hugging Face Hub Documentation",url:"https://huggingface.co/docs/hub/index"}
+   ]},
+  {day:8,title:"Hugging Face, RAG & Fine-tuning",icon:"🧠",tag:"ADVANCED AI",
+   outcomes:["Load and run Hugging Face models with Python","Build a RAG (Retrieval-Augmented Generation) pipeline","Understand tokens, embeddings, vector stores & RAG","Learn PEFT/LoRA fine-tuning techniques"],
+   chips:["Transformers","Pipeline API","RAG","FAISS","Embeddings","LoRA","Fine-tune"],
+   videos:[
+     {title:"RAG From Scratch – LangChain",ch:"LangChain",url:"https://www.youtube.com/watch?v=sVcwVQRHIc8",dur:"30 min"},
+     {title:"Fine-Tuning LLMs with PEFT & LoRA",ch:"Hugging Face",url:"https://www.youtube.com/watch?v=eC6Hd1hFvos",dur:"1 hr"}
+   ],
+   docs:[
+     {label:"HF Transformers Documentation",url:"https://huggingface.co/docs/transformers/"},
+     {label:"PEFT Library Docs (Fine-tuning)",url:"https://huggingface.co/docs/peft/index"},
+     {label:"RAG with LangChain Guide",url:"https://python.langchain.com/docs/use_cases/question_answering/"},
+     {label:"HF Free Inference API",url:"https://huggingface.co/docs/api-inference/index"}
+   ]},
+  {day:9,title:"Google Colab & LangChain",icon:"🔗",tag:"CLOUD & ORCHESTRATION",
+   outcomes:["Use Google Colab for free GPU-powered AI development","Understand LangChain framework components","Build chains, document loaders and memory modules","Develop a full end-to-end LLM application"],
+   chips:["Google Colab","Free GPU","LangChain","Chains","Memory","Agents","LCEL"],
+   videos:[
+     {title:"LangChain Complete Crash Course",ch:"Patrick Loeber",url:"https://www.youtube.com/watch?v=LbT1yp6quS8",dur:"2 hrs"},
+     {title:"Google Colab Tutorial for Beginners",ch:"Sentdex",url:"https://www.youtube.com/watch?v=inN8seMm7UI",dur:"20 min"}
+   ],
+   docs:[
+     {label:"LangChain Python Docs",url:"https://python.langchain.com/docs/introduction/"},
+     {label:"Google Colab (Free Notebook)",url:"https://colab.research.google.com/"},
+     {label:"LangChain GitHub",url:"https://github.com/langchain-ai/langchain"},
+     {label:"Colab FAQ & Pro Tips",url:"https://research.google.com/colaboratory/faq.html"}
+   ]},
+  {day:10,title:"AI Chatbot & Capstone Projects",icon:"🏆",tag:"CAPSTONE",
+   outcomes:["Build and deploy a fully functional AI chatbot","Create a customer ticket segmentation system","Build a resume analyser with Hugging Face NLP","Present and deploy end-to-end AI projects"],
+   chips:["Chatbot","NLP","Text Classification","Resume AI","Deployment","Portfolio"],
+   videos:[
+     {title:"Build an AI Chatbot with Streamlit",ch:"Alejandro AO",url:"https://www.youtube.com/watch?v=dXxQ0LR-3Hg",dur:"1 hr"},
+     {title:"Text Classification with HuggingFace",ch:"Hugging Face",url:"https://www.youtube.com/watch?v=GSt00_-0ncQ",dur:"40 min"}
+   ],
+   docs:[
+     {label:"HF Text Classification Task",url:"https://huggingface.co/docs/transformers/tasks/sequence_classification"},
+     {label:"Streamlit Chat Component Docs",url:"https://docs.streamlit.io/develop/api-reference/chat"},
+     {label:"Build Chatbots with LangChain",url:"https://python.langchain.com/docs/use_cases/chatbots/"},
+     {label:"HF Zero-Shot Classification",url:"https://huggingface.co/tasks/zero-shot-classification"}
+   ]}
+];
+
+const HILIGHTS=[
+  {i:"🎯",t:"Interactive live sessions by industry practitioners"},
+  {i:"💻",t:"Hands-on Python & Generative AI training"},
+  {i:"🛠️",t:"Practical exposure to Gemini, HuggingFace, Claude, Groq & Ollama"},
+  {i:"🧩",t:"Prompt Engineering & AI Agent development"},
+  {i:"🔌",t:"Build mini LLM apps using APIs and Python"},
+  {i:"🖥️",t:"Develop UIs with Streamlit and Tkinter"},
+  {i:"🔗",t:"LangChain, RAG, tokens & LLM fine-tuning"},
+  {i:"☁️",t:"PyCharm, Google Colab, GitHub & Streamlit Cloud"},
+  {i:"📦",t:"Project-based learning for real-world employability"},
+  {i:"🎬",t:"Session recordings provided to all participants"},
+  {i:"💬",t:"Daily doubt resolution & Q&A support sessions"}
+];
+
+const AUDIENCE=[
+  {i:"🎓",l:"AI/GenAI Students"},{i:"💼",l:"IT Professionals"},
+  {i:"👨‍💻",l:"Software Developers"},{i:"📊",l:"Data Scientists"},
+  {i:"🏫",l:"Faculty & Trainers"},{i:"🚀",l:"Entrepreneurs"},
+  {i:"🔬",l:"Research Scholars"},{i:"🤖",l:"AI App Builders"},
+  {i:"🎓",l:"Engineering Students"}
+];
+
+const INDUSTRIES=["Banking & Finance","Insurance","Retail & E-Commerce","Digital Marketing","Consulting","Customer Service","Education","Engineering","Government","Healthcare","IT & Software","Manufacturing","Telecom","Research & Academia","Human Resources","Quality Assurance","Oil & Gas","Public Relations"];
+
+/* ─── Shared styles ───────────────────────────────────────────────────────── */
+const S={
+  bg:"#07071A",surf:"#0D0C2B",card:"#12113A",bdr:"rgba(99,102,241,0.18)",
+  pri:"#6366F1",cyan:"#22D3EE",txt:"#E2E8F0",mut:"#94A3B8",dim:"#475569"
+};
+
+function SecTitle({children}){
+  return ce('h2',{style:{fontSize:17,fontWeight:700,color:S.txt,margin:"0 0 16px",paddingBottom:10,borderBottom:"1px solid "+S.bdr}},children);
+}
+
+function Chip({color,children}){
+  const r=rgb(color);
+  return ce('span',{style:{background:`rgba(${r},0.1)`,color,border:`1px solid rgba(${r},0.25)`,padding:"2px 8px",borderRadius:20,fontSize:11,fontWeight:600}},children);
+}
+
+/* ─── Settings Modal ──────────────────────────────────────────────────────── */
+function SettingsModal({onClose,onSaved}){
+  const saved=localStorage.getItem("gemini_api_key")||"";
+  const [key,setKey]=useState(saved);
+  const [status,setStatus]=useState(saved?"Key saved ✓":"");
+
+  const save=()=>{
+    const k=key.trim();
+    if(!k){return;}
+    localStorage.setItem("gemini_api_key",k);
+    setStatus("Key saved ✓");
+    setTimeout(()=>{onSaved&&onSaved();onClose();},600);
+  };
+  const clear=()=>{
+    localStorage.removeItem("gemini_api_key");
+    setKey("");setStatus("Key removed");
+  };
+
+  return ce('div',{style:{position:"fixed",inset:0,background:"rgba(7,7,26,0.85)",display:"flex",alignItems:"center",justifyContent:"center",zIndex:999,padding:16}},
+    ce('div',{style:{background:S.surf,border:"1px solid rgba(99,102,241,0.35)",borderRadius:16,padding:24,maxWidth:420,width:"100%"}},
+      ce('div',{style:{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}},
+        ce('h3',{style:{fontSize:16,fontWeight:700,color:S.txt}},"⚙️ Configure Gemini API Key"),
+        ce('button',{onClick:onClose,style:{background:"none",border:"none",color:S.mut,fontSize:22,lineHeight:1}},"\u00d7")
+      ),
+      ce('div',{style:{background:"rgba(34,211,238,0.06)",border:"1px solid rgba(34,211,238,0.2)",borderRadius:10,padding:"12px 14px",marginBottom:16}},
+        ce('p',{style:{fontSize:13,color:S.cyan,fontWeight:600,marginBottom:4}},"How to get a FREE Gemini API key:"),
+        ce('ol',{style:{paddingLeft:18,fontSize:12,color:S.mut,lineHeight:1.8}},
+          ce('li',null,"Go to ",ce('a',{href:"https://aistudio.google.com/apikey",target:"_blank",style:{color:S.cyan}},"aistudio.google.com/apikey")),
+          ce('li',null,'Sign in with Google → click "Create API key"'),
+          ce('li',null,'Copy the key (starts with AIzaSy...) and paste below'),
+          ce('li',null,'Free tier: 15 req/min, 1M tokens/day on Gemini 2.0 Flash')
+        )
+      ),
+      ce('label',{style:{fontSize:12,color:S.mut,display:"block",marginBottom:6}},"Your Gemini API Key"),
+      ce('input',{
+        type:"password",value:key,onChange:e=>setKey(e.target.value),
+        onKeyDown:e=>e.key==="Enter"&&save(),
+        placeholder:"AIzaSy...",
+        style:{width:"100%",background:"#07071A",border:"1px solid rgba(99,102,241,0.3)",borderRadius:8,padding:"9px 12px",color:S.txt,fontSize:13,outline:"none",marginBottom:12}
+      }),
+      status&&ce('p',{style:{fontSize:12,color:"#4ADE80",marginBottom:10}},status),
+      ce('div',{style:{display:"flex",gap:8}},
+        ce('button',{onClick:save,disabled:!key.trim(),style:{flex:1,background:S.pri,border:"none",borderRadius:8,padding:"9px 0",color:"#fff",fontWeight:600,fontSize:13,opacity:key.trim()?1:0.5}},"Save Key"),
+        ce('button',{onClick:clear,style:{background:"transparent",border:"1px solid rgba(255,60,60,0.3)",borderRadius:8,padding:"9px 14px",color:"#fb7185",fontSize:13}},"Clear"),
+        ce('button',{onClick:onClose,style:{background:"transparent",border:"1px solid "+S.bdr,borderRadius:8,padding:"9px 14px",color:S.mut,fontSize:13}},"Cancel")
+      )
+    )
+  );
+}
+
+/* ─── Day Card ────────────────────────────────────────────────────────────── */
+function DayCard({d,i,expanded,toggleDay,done,toggleDone,openAI}){
+  const color=ACC[i],r=rgb(color),isOpen=expanded===d.day,isDone=done.has(d.day);
+  return ce('div',{style:{background:S.card,border:`1px solid ${isOpen?color+"55":S.bdr}`,borderRadius:14,overflow:"hidden",transition:"border-color 0.25s",marginBottom:8}},
+    ce('div',{onClick:()=>toggleDay(d.day),style:{display:"flex",alignItems:"center",gap:12,padding:"14px 18px",cursor:"pointer",background:isOpen?`rgba(${r},0.04)`:"transparent",userSelect:"none"}},
+      ce('div',{style:{width:46,height:46,borderRadius:12,background:isDone?color:`rgba(${r},0.12)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0,color:isDone?"#000":color,fontWeight:700}},isDone?"✓":d.icon),
+      ce('div',{style:{flex:1,minWidth:0}},
+        ce('div',{style:{fontSize:11,fontWeight:700,color,textTransform:"uppercase",letterSpacing:0.8,marginBottom:3}},"Day "+d.day+" · "+d.tag),
+        ce('div',{style:{fontSize:15,fontWeight:700,color:S.txt,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}},d.title)
+      ),
+      ce('div',{style:{display:"flex",alignItems:"center",gap:10,flexShrink:0}},
+        ce('span',{style:{fontSize:11,color:S.dim}},"3 hrs"),
+        ce('button',{onClick:e=>{e.stopPropagation();toggleDone(d.day);},title:"Mark complete",style:{width:26,height:26,borderRadius:6,background:isDone?color:"transparent",border:`1.5px solid ${isDone?color:S.dim}`,cursor:"pointer",color:isDone?"#000":S.dim,fontSize:12,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center"}},isDone?"✓":""),
+        ce('span',{style:{color:S.mut,fontSize:15,display:"inline-block",transform:isOpen?"rotate(180deg)":"none",transition:"transform 0.25s"}},"▾")
+      )
+    ),
+    ce('div',{style:{padding:"0 18px 12px",display:"flex",flexWrap:"wrap",gap:5}},
+      d.chips.map(c=>ce(Chip,{key:c,color},c))
+    ),
+    isOpen&&ce('div',{style:{padding:"0 18px 18px"}},
+      ce('div',{style:{height:1,background:S.bdr,marginBottom:18}}),
+      ce('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:20}},
+        ce('div',null,
+          ce('p',{style:{fontSize:11,fontWeight:700,color:S.mut,textTransform:"uppercase",letterSpacing:1,marginBottom:12}},"Learning Outcomes"),
+          d.outcomes.map((o,j)=>ce('div',{key:j,style:{display:"flex",gap:8,marginBottom:9,alignItems:"flex-start"}},
+            ce('span',{style:{color,fontSize:12,marginTop:2,flexShrink:0}},"◆"),
+            ce('span',{style:{fontSize:13,color:S.mut,lineHeight:1.55}},o)
+          ))
+        ),
+        ce('div',null,
+          ce('p',{style:{fontSize:11,fontWeight:700,color:S.mut,textTransform:"uppercase",letterSpacing:1,marginBottom:10}},"Free YouTube Resources"),
+          d.videos.map((v,j)=>ce('a',{key:j,href:v.url,target:"_blank",rel:"noopener noreferrer",style:{display:"flex",gap:10,background:"rgba(255,60,60,0.06)",border:"1px solid rgba(255,60,60,0.18)",borderRadius:9,padding:"9px 11px",marginBottom:8}},
+            ce('span',{style:{fontSize:18,color:"#ff4444",flexShrink:0}},"▶"),
+            ce('div',null,
+              ce('div',{style:{fontSize:12,color:S.txt,fontWeight:500,lineHeight:1.4}},v.title),
+              ce('div',{style:{fontSize:11,color:S.dim,marginTop:2}},v.ch+" · "+v.dur)
+            )
+          )),
+          ce('p',{style:{fontSize:11,fontWeight:700,color:S.mut,textTransform:"uppercase",letterSpacing:1,margin:"14px 0 10px"}},"Docs & Guides"),
+          d.docs.map((r2,j)=>ce('a',{key:j,href:r2.url,target:"_blank",rel:"noopener noreferrer",style:{display:"flex",alignItems:"center",gap:6,color,fontSize:12,marginBottom:8}},
+            ce('span',null,"🔗"),
+            ce('span',{style:{flex:1}},r2.label),
+            ce('span',{style:{fontSize:10,color:S.dim}},"↗")
+          ))
+        )
+      ),
+      ce('div',{style:{marginTop:16,paddingTop:16,borderTop:"1px solid "+S.bdr}},
+        ce('button',{onClick:()=>openAI(d),style:{background:`rgba(${r},0.08)`,border:`1px solid rgba(${r},0.3)`,borderRadius:10,padding:"9px 18px",color,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:8}},
+          "🤖 Ask AI Tutor about Day "+d.day
+        )
+      )
+    )
+  );
+}
+
+/* ─── AI Tutor Panel (Gemini-powered) ────────────────────────────────────── */
+function AIPanel({aiDay,msgs,loading,inp,setInp,send,closeAI,msgsEndRef,inputRef,openSettings}){
+  if(!aiDay)return null;
+  const color=ACC[(aiDay.day-1)%10]||S.pri;
+  const r=rgb(color);
+  return ce('div',{style:{position:"fixed",bottom:16,right:16,width:360,height:490,background:S.surf,border:"1px solid rgba(99,102,241,0.25)",borderRadius:16,boxShadow:"0 20px 60px rgba(0,0,0,0.7)",display:"flex",flexDirection:"column",zIndex:200,overflow:"hidden"}},
+    ce('div',{style:{padding:"12px 14px",background:`rgba(${r},0.08)`,borderBottom:"1px solid "+S.bdr,display:"flex",justifyContent:"space-between",alignItems:"center"}},
+      ce('div',null,
+        ce('div',{style:{fontSize:13,fontWeight:700,color:S.txt}},"🤖 AI Tutor  ·  Gemini"),
+        ce('div',{style:{fontSize:11,color:S.mut}},"Day "+aiDay.day+": "+aiDay.title)
+      ),
+      ce('div',{style:{display:"flex",alignItems:"center",gap:6}},
+        ce('button',{onClick:openSettings,title:"API Key Settings",style:{background:"none",border:"none",color:S.mut,fontSize:16,padding:"2px 6px",cursor:"pointer"}},"⚙"),
+        ce('button',{onClick:closeAI,style:{background:"none",border:"none",color:S.mut,fontSize:22,lineHeight:1}},"\u00d7")
+      )
+    ),
+    ce('div',{style:{flex:1,overflowY:"auto",padding:12,display:"flex",flexDirection:"column",gap:8}},
+      msgs.map((m,i)=>ce('div',{key:i,style:{maxWidth:"88%",alignSelf:m.role==="user"?"flex-end":"flex-start",background:m.role==="user"?S.pri:S.card,borderRadius:m.role==="user"?"12px 12px 2px 12px":"12px 12px 12px 2px",padding:"9px 13px",fontSize:13,color:S.txt,lineHeight:1.6,whiteSpace:"pre-wrap",wordBreak:"break-word"}},m.text)),
+      loading&&ce('div',{style:{alignSelf:"flex-start",background:S.card,borderRadius:"12px 12px 12px 2px",padding:"9px 13px",fontSize:13,color:S.mut}},"Thinking…"),
+      ce('div',{ref:msgsEndRef})
+    ),
+    ce('div',{style:{padding:10,borderTop:"1px solid "+S.bdr,display:"flex",gap:8}},
+      ce('input',{ref:inputRef,value:inp,onChange:e=>setInp(e.target.value),onKeyDown:e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();}},placeholder:"Ask a question…",style:{flex:1,background:S.card,border:"1px solid "+S.bdr,borderRadius:8,padding:"8px 12px",color:S.txt,fontSize:13,outline:"none"}}),
+      ce('button',{onClick:send,disabled:loading||!inp.trim(),style:{background:S.pri,border:"none",borderRadius:8,padding:"0 14px",color:"#fff",fontSize:16,opacity:loading||!inp.trim()?0.45:1,transition:"opacity 0.2s"}},"→")
+    )
+  );
+}
+
+/* ─── Main App ────────────────────────────────────────────────────────────── */
+function App(){
+  const [tab,setTab]=useState("overview");
+  const [expanded,setExpanded]=useState(null);
+  const [done,setDone]=useState(new Set());
+  const [aiOpen,setAiOpen]=useState(false);
+  const [aiDay,setAiDay]=useState(null);
+  const [msgs,setMsgs]=useState([]);
+  const [gemHist,setGemHist]=useState([]);   // Gemini-format history
+  const [inp,setInp]=useState("");
+  const [loading,setLoading]=useState(false);
+  const [showSettings,setShowSettings]=useState(false);
+  const msgsEndRef=useRef(null);
+  const inputRef=useRef(null);
+
+  useEffect(()=>{msgsEndRef.current?.scrollIntoView({behavior:"smooth"});},[msgs,loading]);
+
+  const toggleDay=n=>setExpanded(e=>e===n?null:n);
+  const toggleDone=n=>setDone(p=>{const s=new Set(p);s.has(n)?s.delete(n):s.add(n);return s;});
+
+  const openAI=d=>{
+    setAiDay(d);setGemHist([]);
+    setMsgs([{role:"assistant",text:"Hi! I'm your Gemini-powered AI Tutor for Day "+d.day+": "+d.title+" 🎓\n\nAsk me anything about "+d.chips.slice(0,3).join(", ")+" and more!"}]);
+    setAiOpen(true);
+    setTimeout(()=>inputRef.current?.focus(),150);
+  };
+
+  const openGeneral=()=>{
+    setAiDay({day:"—",title:"Python & GenAI Bootcamp",chips:["Python","AI","LLMs","Streamlit","LangChain","RAG"]});
+    setGemHist([]);
+    setMsgs([{role:"assistant",text:"Hi! I'm your Gemini-powered AI Tutor for the full course 🎓\n\nAsk me anything from Days 1–10!"}]);
+    setAiOpen(true);
+    setTimeout(()=>inputRef.current?.focus(),150);
+  };
+
+  /* ── GEMINI API CALL ──────────────────────────────────────────────────────
+     Format differences vs Anthropic:
+       • role "assistant" → "model"
+       • content string  → parts: [{text: "..."}]
+       • system goes in  → system_instruction.parts[0].text
+       • response path   → data.candidates[0].content.parts[0].text
+       • API key in URL  → ?key=YOUR_KEY (no auth header needed)
+  ────────────────────────────────────────────────────────────────────────── */
+  const send=async()=>{
+    const q=inp.trim();
+    if(!q||loading||!aiDay)return;
+
+    // Resolve API key: CONFIG → localStorage → prompt settings
+    const apiKey=(CONFIG.GEMINI_API_KEY||"").trim()||localStorage.getItem("gemini_api_key")||"";
+    if(!apiKey){
+      setShowSettings(true);
+      setMsgs(prev=>[...prev,{role:"assistant",text:"⚙️ No API key found.\n\nClick the ⚙ Settings button above to add your free Gemini API key from aistudio.google.com/apikey"}]);
+      return;
+    }
+
+    setInp("");
+    setMsgs(prev=>[...prev,{role:"user",text:q}]);
+
+    // Build Gemini conversation history
+    const newHist=[...gemHist,{role:"user",parts:[{text:q}]}];
+    setGemHist(newHist);
+    setLoading(true);
+
+    const sys=aiDay.day==="—"
+      ?`You are an expert AI tutor for a 10-day Python & Generative AI bootcamp. Topics span: Python basics, Gemini API, OpenAI API, Streamlit, PyCharm, Ollama, Tkinter, Groq, Claude, Hugging Face, RAG, LangChain, and AI Agents. Give concise, practical explanations with Python code examples where useful. Be encouraging.`
+      :`You are an expert AI tutor for a Python & Generative AI bootcamp. The student is on Day ${aiDay.day}: "${aiDay.title}". Key topics: ${aiDay.chips.join(", ")}. Give clear, practical explanations with Python code examples where relevant. Be encouraging and concise.`;
+
+    try{
+      const res=await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.GEMINI_MODEL}:generateContent?key=${apiKey}`,
+        {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body:JSON.stringify({
+            system_instruction:{parts:[{text:sys}]},
+            contents:newHist,
+            generationConfig:{maxOutputTokens:1000,temperature:0.7}
+          })
+        }
+      );
+      const data=await res.json();
+
+      if(data.error){
+        const msg=data.error.message||"Unknown error";
+        setMsgs(prev=>[...prev,{role:"assistant",text:"⚠️ Gemini API Error:\n"+msg+"\n\nCheck your key in ⚙ Settings."}]);
+        setGemHist(prev=>prev.slice(0,-1));  // remove failed message
+      }else{
+        const reply=data.candidates?.[0]?.content?.parts?.[0]?.text||"Sorry, I couldn't generate a response.";
+        setMsgs(prev=>[...prev,{role:"assistant",text:reply}]);
+        setGemHist(prev=>[...prev,{role:"model",parts:[{text:reply}]}]);
+      }
+    }catch(err){
+      setMsgs(prev=>[...prev,{role:"assistant",text:"⚠️ Network error.\nCheck your internet connection and API key."}]);
+      setGemHist(prev=>prev.slice(0,-1));
+    }
+    setLoading(false);
+  };
+
+  const progress=(done.size/DAYS.length)*100;
+  const tabs=[["overview","Overview"],["curriculum","Curriculum"],["resources","Resources"],["about","About"]];
+
+  return ce('div',{style:{fontFamily:"system-ui,-apple-system,sans-serif",background:S.bg,color:S.txt,minHeight:"100vh"}},
+
+    /* HERO */
+    ce('div',{style:{background:"linear-gradient(135deg,#0D0C2B 0%,#1a0a3e 55%,#0a1030 100%)",padding:"32px 22px 26px",borderBottom:"1px solid "+S.bdr,position:"relative",overflow:"hidden"}},
+      ce('div',{style:{position:"absolute",inset:0,backgroundImage:"linear-gradient(rgba(99,102,241,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,0.07) 1px,transparent 1px)",backgroundSize:"36px 36px",pointerEvents:"none"}}),
+      ce('div',{style:{maxWidth:860,margin:"0 auto",position:"relative"}},
+        ce('div',{style:{display:"flex",gap:8,marginBottom:14,flexWrap:"wrap"}},
+          ce('span',{style:{background:S.pri,color:"#fff",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:700,letterSpacing:1}},"10-DAY BOOTCAMP"),
+          ce('span',{style:{background:"rgba(34,211,238,0.1)",color:S.cyan,padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:600,border:"1px solid rgba(34,211,238,0.25)"}},"FREE RESOURCES INCLUDED"),
+          ce('span',{style:{background:"rgba(74,222,128,0.1)",color:"#4ADE80",padding:"3px 12px",borderRadius:20,fontSize:11,fontWeight:600,border:"1px solid rgba(74,222,128,0.25)"}},"GEMINI AI TUTOR")
+        ),
+        ce('h1',{style:{fontSize:"clamp(20px,3.5vw,34px)",fontWeight:800,lineHeight:1.2,margin:"0 0 6px",background:"linear-gradient(130deg,#fff 25%,#a5b4fc 65%,#67e8f9 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}},"Python & Generative AI"),
+        ce('p',{style:{color:S.mut,fontSize:14,margin:"4px 0 18px",maxWidth:500}},"From Python basics to deploying AI agents — 30 hours of structured learning with free YouTube & official documentation for every session."),
+        ce('div',{style:{display:"flex",flexWrap:"wrap",gap:10,marginBottom:20}},
+          [["10","Days"],["30","Hours"],["5+","Projects"],["8+","AI Tools"]].map(([v,l])=>
+            ce('div',{key:l,style:{background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.22)",borderRadius:10,padding:"7px 16px",textAlign:"center"}},
+              ce('div',{style:{fontSize:20,fontWeight:800,color:"#a5b4fc"}},v),
+              ce('div',{style:{fontSize:10,color:S.mut,textTransform:"uppercase",letterSpacing:1}},l)
+            )
+          )
+        ),
+        ce('div',{style:{maxWidth:380}},
+          ce('div',{style:{display:"flex",justifyContent:"space-between",marginBottom:5,fontSize:12,color:S.mut}},
+            ce('span',null,"Your Progress"),
+            ce('span',{style:{color:S.cyan}},done.size+"/"+DAYS.length+" complete")
+          ),
+          ce('div',{style:{height:5,background:"rgba(99,102,241,0.15)",borderRadius:3}},
+            ce('div',{style:{height:"100%",width:progress+"%",background:"linear-gradient(90deg,#6366F1,#22D3EE)",borderRadius:3,transition:"width 0.5s"}})
+          )
+        )
+      )
+    ),
+
+    /* TABS */
+    ce('div',{style:{background:S.surf,borderBottom:"1px solid "+S.bdr,position:"sticky",top:0,zIndex:20}},
+      ce('div',{style:{maxWidth:860,margin:"0 auto",display:"flex",padding:"0 22px",overflowX:"auto"}},
+        tabs.map(([id,label])=>ce('button',{key:id,onClick:()=>setTab(id),style:{background:"none",border:"none",padding:"13px 16px",color:tab===id?S.pri:S.mut,fontWeight:tab===id?700:400,fontSize:14,cursor:"pointer",borderBottom:`2px solid ${tab===id?S.pri:"transparent"}`,transition:"all 0.2s",whiteSpace:"nowrap"}},label))
+      )
+    ),
+
+    /* CONTENT */
+    ce('div',{style:{maxWidth:860,margin:"0 auto",padding:"26px 22px"}},
+
+      /* ── OVERVIEW ── */
+      tab==="overview"&&ce('div',null,
+        ce(SecTitle,null,"Course Highlights"),
+        ce('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(220px,1fr))",gap:10,marginBottom:36}},
+          HILIGHTS.map((h,i)=>ce('div',{key:i,style:{background:S.card,border:"1px solid "+S.bdr,borderRadius:10,padding:"12px 14px",display:"flex",alignItems:"flex-start",gap:10}},
+            ce('span',{style:{fontSize:15,flexShrink:0}},h.i),
+            ce('span',{style:{fontSize:13,color:S.mut,lineHeight:1.5}},h.t)
+          ))
+        ),
+        ce(SecTitle,null,"10-Day Journey"),
+        ce('div',{style:{position:"relative"}},
+          ce('div',{style:{position:"absolute",left:18,top:22,bottom:22,width:2,background:"linear-gradient(180deg,#6366F1,#22D3EE)",opacity:0.2}}),
+          DAYS.map((d,i)=>{
+            const color=ACC[i],isDone=done.has(d.day);
+            return ce('div',{key:d.day,onClick:()=>{setExpanded(d.day);setTab("curriculum");},style:{display:"flex",alignItems:"center",gap:14,padding:"7px 0",cursor:"pointer"}},
+              ce('div',{style:{width:38,height:38,borderRadius:"50%",background:isDone?color:S.card,border:"2px solid "+color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:700,color:isDone?"#000":color,flexShrink:0,zIndex:1}},isDone?"✓":d.day),
+              ce('div',{style:{flex:1,background:S.card,border:"1px solid "+S.bdr,borderRadius:10,padding:"9px 14px"}},
+                ce('div',{style:{fontSize:13,color,fontWeight:700}},d.title),
+                ce('div',{style:{fontSize:11,color:S.dim,marginTop:2}},d.tag+" · 3 Hours")
+              )
+            );
+          })
+        )
+      ),
+
+      /* ── CURRICULUM ── */
+      tab==="curriculum"&&ce('div',null,
+        DAYS.map((d,i)=>ce(DayCard,{key:d.day,d,i,expanded,toggleDay,done,toggleDone,openAI}))
+      ),
+
+      /* ── RESOURCES ── */
+      tab==="resources"&&ce('div',null,
+        ce(SecTitle,null,"All Free Learning Resources"),
+        ce('p',{style:{color:S.mut,fontSize:13,marginBottom:28}},"Free YouTube videos and official documentation for all 10 days."),
+        DAYS.map((d,i)=>ce('div',{key:d.day,style:{marginBottom:28}},
+          ce('div',{style:{display:"flex",alignItems:"center",gap:10,marginBottom:12}},
+            ce('span',{style:{background:`rgba(${rgb(ACC[i])},0.12)`,color:ACC[i],padding:"3px 10px",borderRadius:20,fontSize:11,fontWeight:700}},"Day "+d.day),
+            ce('span',{style:{fontSize:14,fontWeight:700,color:S.txt}},d.title)
+          ),
+          ce('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(250px,1fr))",gap:8}},
+            d.videos.map((v,j)=>ce('a',{key:"v"+j,href:v.url,target:"_blank",rel:"noopener noreferrer",style:{display:"flex",gap:10,background:S.card,border:"1px solid rgba(255,60,60,0.18)",borderRadius:10,padding:"11px 12px"}},
+              ce('div',{style:{width:36,height:36,background:"rgba(255,60,60,0.1)",borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,color:"#ff4444",flexShrink:0}},"▶"),
+              ce('div',{style:{minWidth:0}},
+                ce('div',{style:{fontSize:12,color:S.txt,fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},v.title),
+                ce('div',{style:{fontSize:11,color:S.dim,marginTop:2}},v.ch+" · "+v.dur)
+              )
+            )),
+            d.docs.map((r2,j)=>ce('a',{key:"d"+j,href:r2.url,target:"_blank",rel:"noopener noreferrer",style:{display:"flex",gap:10,background:S.card,border:"1px solid "+S.bdr,borderRadius:10,padding:"11px 12px"}},
+              ce('div',{style:{width:36,height:36,background:`rgba(${rgb(ACC[i])},0.1)`,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}},"📄"),
+              ce('div',{style:{minWidth:0}},
+                ce('div',{style:{fontSize:12,color:ACC[i],fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},r2.label),
+                ce('div',{style:{fontSize:11,color:S.dim,marginTop:2}},"Docs ↗")
+              )
+            ))
+          )
+        ))
+      ),
+
+      /* ── ABOUT ── */
+      tab==="about"&&ce('div',null,
+        ce(SecTitle,null,"Requirements"),
+        ce('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:12,marginBottom:36}},
+          [["💻","Computer or laptop with 4 GB RAM or higher"],["🌐","Stable internet connection with decent speed"]].map(([icon,text],i)=>
+            ce('div',{key:i,style:{background:S.card,border:"1px solid "+S.bdr,borderRadius:12,padding:16,display:"flex",gap:12,alignItems:"flex-start"}},
+              ce('span',{style:{fontSize:24}},icon),
+              ce('span',{style:{fontSize:13,color:S.mut,lineHeight:1.6}},text)
+            )
+          )
+        ),
+        ce(SecTitle,null,"Who Should Attend"),
+        ce('div',{style:{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))",gap:10,marginBottom:36}},
+          AUDIENCE.map((a,i)=>ce('div',{key:i,style:{background:S.card,border:"1px solid "+S.bdr,borderRadius:12,padding:"14px 8px",display:"flex",flexDirection:"column",alignItems:"center",gap:8,textAlign:"center"}},
+            ce('span',{style:{fontSize:26}},a.i),
+            ce('span',{style:{fontSize:12,color:S.mut,fontWeight:500,lineHeight:1.4}},a.l)
+          ))
+        ),
+        ce(SecTitle,null,"Industries Served"),
+        ce('div',{style:{display:"flex",flexWrap:"wrap",gap:8}},
+          INDUSTRIES.map((ind,i)=>ce('span',{key:i,style:{background:S.card,border:"1px solid "+S.bdr,borderRadius:20,padding:"5px 14px",fontSize:12,color:S.mut}},ind))
+        )
+      )
+    ),
+
+    /* FLOATING AI BUTTON */
+    !aiOpen&&ce('button',{onClick:openGeneral,style:{position:"fixed",bottom:20,right:20,background:S.pri,border:"none",borderRadius:28,padding:"11px 20px",color:"#fff",cursor:"pointer",fontSize:13,fontWeight:600,boxShadow:"0 4px 24px rgba(99,102,241,0.45)",display:"flex",alignItems:"center",gap:8,zIndex:50}},"🤖 AI Tutor"),
+
+    /* AI PANEL */
+    aiOpen&&ce(AIPanel,{aiDay,msgs,loading,inp,setInp,send,closeAI:()=>setAiOpen(false),msgsEndRef,inputRef,openSettings:()=>setShowSettings(true)}),
+
+    /* SETTINGS MODAL */
+    showSettings&&ce(SettingsModal,{onClose:()=>setShowSettings(false),onSaved:()=>{}})
+  );
+}
+
+ReactDOM.render(ce(App),document.getElementById("root"));
+</script>
+</body>
+</html>
